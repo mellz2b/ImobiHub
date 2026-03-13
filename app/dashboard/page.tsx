@@ -1,12 +1,21 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { loadProperties, Property, saveProperties } from "@/lib/property-store";
+import {
+  DealType,
+  getInitialProperties,
+  loadProperties,
+  Property,
+  PropertyType,
+  saveProperties,
+} from "@/lib/property-store";
 
 type DraftProperty = {
   title: string;
+  dealType: DealType;
+  propertyType: PropertyType;
   city: string;
   neighborhood: string;
   price: string;
@@ -19,6 +28,8 @@ type DraftProperty = {
 
 const emptyDraft: DraftProperty = {
   title: "",
+  dealType: "comprar",
+  propertyType: "apartamento",
   city: "",
   neighborhood: "",
   price: "",
@@ -37,6 +48,26 @@ function toCurrency(value: number) {
   }).format(value);
 }
 
+function formatDealType(value: DealType) {
+  const labels: Record<DealType, string> = {
+    alugar: "Alugar",
+    comprar: "Comprar",
+    "imovel-novo": "Imovel novo",
+    leilao: "Leilao",
+  };
+  return labels[value];
+}
+
+function formatPropertyType(value: PropertyType) {
+  const labels: Record<PropertyType, string> = {
+    apartamento: "Apartamento",
+    casa: "Casa",
+    "imovel-comercial": "Imovel comercial",
+    terreno: "Terreno",
+  };
+  return labels[value];
+}
+
 function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -47,9 +78,13 @@ function readFileAsDataUrl(file: File): Promise<string> {
 }
 
 export default function DashboardPage() {
-  const [properties, setProperties] = useState<Property[]>(() => loadProperties());
+  const [properties, setProperties] = useState<Property[]>(() => getInitialProperties());
   const [draft, setDraft] = useState<DraftProperty>(emptyDraft);
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
+
+  useEffect(() => {
+    setProperties(loadProperties());
+  }, []);
 
   const availableCount = useMemo(
     () => properties.filter((item) => !item.sold).length,
@@ -64,7 +99,7 @@ export default function DashboardPage() {
   };
 
   const handleInputChange = (
-    event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+    event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
   ) => {
     const { name, value } = event.target;
     setDraft((prev) => ({ ...prev, [name]: value }));
@@ -83,6 +118,8 @@ export default function DashboardPage() {
     const nextProperty: Property = {
       id: `imovel-${Date.now()}`,
       title: draft.title,
+      dealType: draft.dealType,
+      propertyType: draft.propertyType,
       city: draft.city,
       neighborhood: draft.neighborhood,
       price: Number(draft.price),
@@ -165,6 +202,36 @@ export default function DashboardPage() {
           <h2 className="text-xl font-semibold">Adicionar imovel</h2>
           <form onSubmit={addProperty} className="mt-4 grid gap-4 md:grid-cols-2">
             <input required name="title" value={draft.title} onChange={handleInputChange} className="rounded-xl border border-[#bfd0e8] px-4 py-3" placeholder="Titulo do imovel" />
+            <label className="text-sm text-[#42597a]">
+              <span className="mb-1 block">Tipo de negocio</span>
+              <select
+                required
+                name="dealType"
+                value={draft.dealType}
+                onChange={handleInputChange}
+                className="w-full rounded-xl border border-[#bfd0e8] px-4 py-3"
+              >
+                <option value="alugar">Alugar</option>
+                <option value="comprar">Comprar</option>
+                <option value="imovel-novo">Imovel novo</option>
+                <option value="leilao">Leilao</option>
+              </select>
+            </label>
+            <label className="text-sm text-[#42597a]">
+              <span className="mb-1 block">Tipo de imovel</span>
+              <select
+                required
+                name="propertyType"
+                value={draft.propertyType}
+                onChange={handleInputChange}
+                className="w-full rounded-xl border border-[#bfd0e8] px-4 py-3"
+              >
+                <option value="apartamento">Apartamento</option>
+                <option value="casa">Casa</option>
+                <option value="imovel-comercial">Imovel comercial</option>
+                <option value="terreno">Terreno</option>
+              </select>
+            </label>
             <input required name="city" value={draft.city} onChange={handleInputChange} className="rounded-xl border border-[#bfd0e8] px-4 py-3" placeholder="Cidade" />
             <input required name="neighborhood" value={draft.neighborhood} onChange={handleInputChange} className="rounded-xl border border-[#bfd0e8] px-4 py-3" placeholder="Bairro" />
             <input required name="price" type="number" min="1" value={draft.price} onChange={handleInputChange} className="rounded-xl border border-[#bfd0e8] px-4 py-3" placeholder="Preco" />
@@ -191,6 +258,10 @@ export default function DashboardPage() {
                 <div>
                   <h3 className="text-lg font-semibold">{item.title}</h3>
                   <p className="text-sm text-[#4a6183]">{item.neighborhood}, {item.city}</p>
+                  <p className="mt-1 flex flex-wrap gap-2 text-xs text-[#334a6b]">
+                    <span className="rounded-full bg-[#eef4fd] px-2 py-1">{formatDealType(item.dealType)}</span>
+                    <span className="rounded-full bg-[#eef4fd] px-2 py-1">{formatPropertyType(item.propertyType)}</span>
+                  </p>
                 </div>
                 <span className={`rounded-full px-3 py-1 text-xs font-semibold ${item.sold ? "bg-[#e8ecf4] text-[#455b7a]" : "bg-[#deebfa] text-[#0f3f75]"}`}>
                   {item.sold ? "Vendido" : "Disponivel"}
