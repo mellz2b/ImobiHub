@@ -17,6 +17,7 @@ final class PropertyRepository
 
     public function listPublic(array $filters): array
     {
+        // Monta SQL dinamica com filtros opcionais de forma segura via bind.
         $conditions = ['deal_type = :deal_type'];
         $params = [':deal_type' => $filters['deal_type'] ?? 'comprar'];
 
@@ -157,6 +158,7 @@ SQL;
 
     public function seedIfEmpty(): void
     {
+        // Seed minimo para facilitar uso local e demos da aplicacao.
         $count = (int) $this->pdo->query('SELECT COUNT(*) FROM properties')->fetchColumn();
         if ($count > 0) {
             return;
@@ -200,6 +202,7 @@ SQL;
 
     private function hydrateMany(array $rows): array
     {
+        // Normaliza tipos vindos do SQLite para facilitar consumo na camada de view.
         return array_map(function (array $row): array {
             $row['id'] = (int) $row['id'];
             $row['sold'] = (bool) $row['sold'];

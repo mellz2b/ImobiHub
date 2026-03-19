@@ -8,194 +8,229 @@ $allowedDealTypes = ['comprar'];
 $allowedPropertyTypes = ['apartamento', 'casa', 'imovel-comercial', 'terreno'];
 $errors = [];
 
+/**
+ * Campos textuais obrigatorios compartilhados entre cadastro e edicao.
+ * Mantemos essa lista centralizada para evitar divergencia de regras.
+ */
+const REQUIRED_TEXT_FIELDS = ['title', 'city', 'neighborhood', 'description', 'sustainability_tag'];
+
+function redirect_dashboard(string $status): void
+{
+  header('Location: /dashboard.php?ok=' . urlencode($status));
+  exit;
+}
+
+function collect_property_payload(bool $forceComprar = false): array
+{
+  return [
+    'title' => request_post_string('title'),
+    'deal_type' => $forceComprar ? 'comprar' : request_post_string('deal_type'),
+    'property_type' => request_post_string('property_type'),
+    'city' => request_post_string('city'),
+    'neighborhood' => request_post_string('neighborhood'),
+    'price' => request_post_string('price'),
+    'area' => request_post_string('area'),
+    'bedrooms' => request_post_string('bedrooms'),
+    'bathrooms' => request_post_string('bathrooms'),
+    'description' => request_post_string('description'),
+    'sustainability_tag' => request_post_string('sustainability_tag'),
+  ];
+}
+
+function validate_property_payload(
+  array $data,
+  array $allowedDealTypes,
+  array $allowedPropertyTypes,
+  string $requiredMessage,
+  string $invalidTypeMessage,
+  string $invalidNumbersMessage
+): array {
+  $validationErrors = [];
+
+  foreach (REQUIRED_TEXT_FIELDS as $requiredField) {
+    if ($data[$requiredField] === '') {
+      $validationErrors[] = $requiredMessage;
+      break;
+    }
+  }
+
+  if (!in_array($data['deal_type'], $allowedDealTypes, true) || !in_array($data['property_type'], $allowedPropertyTypes, true)) {
+    $validationErrors[] = $invalidTypeMessage;
+  }
+
+  $price = (float) $data['price'];
+  $area = (int) $data['area'];
+  $bedrooms = (int) $data['bedrooms'];
+  $bathrooms = (int) $data['bathrooms'];
+
+  if ($price <= 0 || $area <= 0 || $bedrooms < 0 || $bathrooms < 0) {
+    $validationErrors[] = $invalidNumbersMessage;
+  }
+
+  return $validationErrors;
+}
+
+function upload_property_photos(array $files, array $config): array
+{
+  $uploadErrors = [];
+  $photoPaths = [];
+
+  if (!isset($files['photos']) || !is_array($files['photos']['name'])) {
+    return ['errors' => $uploadErrors, 'paths' => $photoPaths];
+  }
+
+  $totalFiles = count($files['photos']['name']);
+
+  for ($i = 0; $i < $totalFiles; $i++) {
+    if ($files['photos']['error'][$i] === UPLOAD_ERR_NO_FILE) {
+      continue;
+    }
+
+    if ($files['photos']['error'][$i] !== UPLOAD_ERR_OK) {
+      $uploadErrors[] = 'Falha ao enviar uma das fotos.';
+      continue;
+    }
+
+    $tmpPath = (string) $files['photos']['tmp_name'][$i];
+    $originalName = (string) $files['photos']['name'][$i];
+    $size = (int) $files['photos']['size'][$i];
+
+    if ($size > 5 * 1024 * 1024) {
+      $uploadErrors[] = 'Cada imagem deve ter no maximo 5MB.';
+      continue;
+    }
+
+    $mime = '';
+    if (function_exists('finfo_open')) {
+      $finfo = finfo_open(FILEINFO_MIME_TYPE);
+      if ($finfo !== false) {
+        $mime = (string) finfo_file($finfo, $tmpPath);
+        finfo_close($finfo);
+      }
+    }
+
+    if ($mime === '') {
+      $mime = (string) mime_content_type($tmpPath);
+    }
+
+    if (strpos($mime, 'image/') !== 0) {
+      $uploadErrors[] = 'Apenas arquivos de imagem sao permitidos.';
+      continue;
+    }
+
+    $extension = strtolower((string) pathinfo($originalName, PATHINFO_EXTENSION));
+    if ($extension === '') {
+      $extension = 'jpg';
+    }
+
+    $filename = 'img_' . bin2hex(random_bytes(8)) . '.' . preg_replace('/[^a-z0-9]/', '', $extension);
+    $destination = $config['upload_dir'] . DIRECTORY_SEPARATOR . $filename;
+
+    if (!move_uploaded_file($tmpPath, $destination)) {
+      $uploadErrors[] = 'Nao foi possivel salvar uma imagem no servidor.';
+      continue;
+    }
+
+    $photoPaths[] = $config['upload_web_prefix'] . '/' . $filename;
+  }
+
+  return ['errors' => $uploadErrors, 'paths' => $photoPaths];
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!csrf_is_valid($_POST['csrf_token'] ?? null)) {
         $errors[] = 'Token CSRF invalido. Atualize a pagina e tente novamente.';
     } else {
         $action = request_post_string('action');
 
-        if ($action === 'create') {
-            $data = [
-                'title' => request_post_string('title'),
-                'deal_type' => request_post_string('deal_type'),
-                'property_type' => request_post_string('property_type'),
-                'city' => request_post_string('city'),
-                'neighborhood' => request_post_string('neighborhood'),
-                'price' => request_post_string('price'),
-                'area' => request_post_string('area'),
-                'bedrooms' => request_post_string('bedrooms'),
-                'bathrooms' => request_post_string('bathrooms'),
-                'description' => request_post_string('description'),
-                'sustainability_tag' => request_post_string('sustainability_tag'),
-            ];
+    switch ($action) {
+      case 'create':
+        $data = collect_property_payload();
+        $errors = array_merge(
+          $errors,
+          validate_property_payload(
+            $data,
+            $allowedDealTypes,
+            $allowedPropertyTypes,
+            'Preencha todos os campos obrigatorios.',
+            'Tipo de negocio ou tipo de imovel invalido.',
+            'Valores numericos invalidos.'
+          )
+        );
 
-            foreach (['title', 'city', 'neighborhood', 'description', 'sustainability_tag'] as $requiredField) {
-                if ($data[$requiredField] === '') {
-                    $errors[] = 'Preencha todos os campos obrigatorios.';
-                    break;
-                }
-            }
+        $uploadResult = upload_property_photos($_FILES, $config);
+        $errors = array_merge($errors, $uploadResult['errors']);
 
-            if (!in_array($data['deal_type'], $allowedDealTypes, true)) {
-                $errors[] = 'Tipo de negocio invalido.';
-            }
-            if (!in_array($data['property_type'], $allowedPropertyTypes, true)) {
-                $errors[] = 'Tipo de imovel invalido.';
-            }
+        if (count($errors) === 0) {
+          $repository->create($data, $uploadResult['paths']);
+          redirect_dashboard('created');
+        }
+        break;
 
-            $price = (float) $data['price'];
-            $area = (int) $data['area'];
-            $bedrooms = (int) $data['bedrooms'];
-            $bathrooms = (int) $data['bathrooms'];
+      case 'update_price':
+        $id = (int) request_post_string('id');
+        $price = (float) request_post_string('price');
 
-            if ($price <= 0 || $area <= 0 || $bedrooms < 0 || $bathrooms < 0) {
-                $errors[] = 'Valores numericos invalidos.';
-            }
-
-            $photoPaths = [];
-            if (isset($_FILES['photos']) && is_array($_FILES['photos']['name'])) {
-                $totalFiles = count($_FILES['photos']['name']);
-
-                for ($i = 0; $i < $totalFiles; $i++) {
-                    if ($_FILES['photos']['error'][$i] === UPLOAD_ERR_NO_FILE) {
-                        continue;
-                    }
-
-                    if ($_FILES['photos']['error'][$i] !== UPLOAD_ERR_OK) {
-                        $errors[] = 'Falha ao enviar uma das fotos.';
-                        continue;
-                    }
-
-                    $tmpPath = (string) $_FILES['photos']['tmp_name'][$i];
-                    $originalName = (string) $_FILES['photos']['name'][$i];
-                    $size = (int) $_FILES['photos']['size'][$i];
-
-                    if ($size > 5 * 1024 * 1024) {
-                        $errors[] = 'Cada imagem deve ter no maximo 5MB.';
-                        continue;
-                    }
-
-                    $mime = '';
-                    if (function_exists('finfo_open')) {
-                        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-                        if ($finfo !== false) {
-                            $mime = (string) finfo_file($finfo, $tmpPath);
-                            finfo_close($finfo);
-                        }
-                    }
-
-                    if ($mime === '') {
-                        $mime = (string) mime_content_type($tmpPath);
-                    }
-
-                    if (strpos($mime, 'image/') !== 0) {
-                        $errors[] = 'Apenas arquivos de imagem sao permitidos.';
-                        continue;
-                    }
-
-                    $extension = strtolower((string) pathinfo($originalName, PATHINFO_EXTENSION));
-                    if ($extension === '') {
-                        $extension = 'jpg';
-                    }
-
-                    $filename = 'img_' . bin2hex(random_bytes(8)) . '.' . preg_replace('/[^a-z0-9]/', '', $extension);
-                    $destination = $config['upload_dir'] . DIRECTORY_SEPARATOR . $filename;
-
-                    if (!move_uploaded_file($tmpPath, $destination)) {
-                        $errors[] = 'Nao foi possivel salvar uma imagem no servidor.';
-                        continue;
-                    }
-
-                    $photoPaths[] = $config['upload_web_prefix'] . '/' . $filename;
-                }
-            }
-
-            if (count($errors) === 0) {
-                $repository->create($data, $photoPaths);
-                header('Location: /dashboard.php?ok=created');
-                exit;
-            }
+        if ($id > 0 && $price > 0) {
+          $repository->updatePrice($id, $price);
+          redirect_dashboard('price');
         }
 
-        if ($action === 'update_price') {
-            $id = (int) request_post_string('id');
-            $price = (float) request_post_string('price');
+        $errors[] = 'Nao foi possivel atualizar o preco.';
+        break;
 
-            if ($id > 0 && $price > 0) {
-                $repository->updatePrice($id, $price);
-                header('Location: /dashboard.php?ok=price');
-                exit;
-            }
+      case 'toggle_sold':
+        $id = (int) request_post_string('id');
 
-            $errors[] = 'Nao foi possivel atualizar o preco.';
+        if ($id > 0) {
+          $repository->toggleSold($id);
+          redirect_dashboard('sold');
         }
 
-        if ($action === 'toggle_sold') {
-            $id = (int) request_post_string('id');
+        $errors[] = 'Nao foi possivel atualizar o status do imovel.';
+        break;
 
-            if ($id > 0) {
-                $repository->toggleSold($id);
-                header('Location: /dashboard.php?ok=sold');
-                exit;
-            }
+      case 'edit':
+        $id = (int) request_post_string('id');
+        $data = collect_property_payload(true);
 
-            $errors[] = 'Nao foi possivel atualizar o status do imovel.';
+        $errors = array_merge(
+          $errors,
+          validate_property_payload(
+            $data,
+            ['comprar'],
+            $allowedPropertyTypes,
+            'Preencha todos os campos obrigatorios da edicao.',
+            'Tipo de imovel invalido na edicao.',
+            'Valores invalidos para editar o imovel.'
+          )
+        );
+
+        if ($id <= 0) {
+          $errors[] = 'Identificador de anuncio invalido para edicao.';
         }
 
-          if ($action === 'edit') {
-            $id = (int) request_post_string('id');
-            $data = [
-              'title' => request_post_string('title'),
-              'deal_type' => 'comprar',
-              'property_type' => request_post_string('property_type'),
-              'city' => request_post_string('city'),
-              'neighborhood' => request_post_string('neighborhood'),
-              'price' => request_post_string('price'),
-              'area' => request_post_string('area'),
-              'bedrooms' => request_post_string('bedrooms'),
-              'bathrooms' => request_post_string('bathrooms'),
-              'description' => request_post_string('description'),
-              'sustainability_tag' => request_post_string('sustainability_tag'),
-            ];
+        if (count($errors) === 0) {
+          $repository->update($id, $data);
+          redirect_dashboard('edited');
+        }
+        break;
 
-            foreach (['title', 'city', 'neighborhood', 'description', 'sustainability_tag'] as $requiredField) {
-              if ($data[$requiredField] === '') {
-                $errors[] = 'Preencha todos os campos obrigatorios da edicao.';
-                break;
-              }
-            }
+      case 'delete':
+        $id = (int) request_post_string('id');
 
-            if (!in_array($data['property_type'], $allowedPropertyTypes, true)) {
-              $errors[] = 'Tipo de imovel invalido na edicao.';
-            }
+        if ($id > 0) {
+          $repository->delete($id);
+          redirect_dashboard('deleted');
+        }
 
-            $price = (float) $data['price'];
-            $area = (int) $data['area'];
-            $bedrooms = (int) $data['bedrooms'];
-            $bathrooms = (int) $data['bathrooms'];
+        $errors[] = 'Nao foi possivel excluir o anuncio.';
+        break;
 
-            if ($id <= 0 || $price <= 0 || $area <= 0 || $bedrooms < 0 || $bathrooms < 0) {
-              $errors[] = 'Valores invalidos para editar o imovel.';
-            }
-
-            if (count($errors) === 0) {
-              $repository->update($id, $data);
-              header('Location: /dashboard.php?ok=edited');
-              exit;
-            }
-          }
-
-          if ($action === 'delete') {
-            $id = (int) request_post_string('id');
-
-            if ($id > 0) {
-              $repository->delete($id);
-              header('Location: /dashboard.php?ok=deleted');
-              exit;
-            }
-
-            $errors[] = 'Nao foi possivel excluir o anuncio.';
-          }
+      default:
+        $errors[] = 'Acao desconhecida.';
+        break;
+    }
     }
 }
 

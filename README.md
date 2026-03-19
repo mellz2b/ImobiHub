@@ -45,3 +45,36 @@ php -S localhost:8000 -t public
 
 - `http://localhost:8000/`
 - `http://localhost:8000/dashboard.php`
+
+## Guia rapido para contribuicao
+
+### Organizacao do codigo
+
+- Camada HTTP/UI: `php-app/public/*.php`
+- Camada de dados: `php-app/src/PropertyRepository.php`
+- Infraestrutura de banco: `php-app/src/Database.php`
+- Utilitarios comuns: `php-app/src/helpers.php`
+- Bootstrap da aplicacao: `php-app/bootstrap.php`
+
+### Boas praticas adotadas no projeto
+
+- Sempre usar `declare(strict_types=1);` nos arquivos PHP.
+- Validar entrada de formulario antes de chamar o repositorio.
+- Usar bind de parametros no PDO (evitar SQL interpolada).
+- Escapar saida HTML com `e()` para prevenir XSS.
+- Manter mensagens de erro simples para o usuario e detalhamento no codigo.
+
+### Fluxo de desenvolvimento sugerido
+
+1. Criar branch de feature.
+2. Rodar servidor local e testar catalogo e dashboard.
+3. Validar sintaxe:
+
+```bash
+php -l php-app/public/index.php
+php -l php-app/public/dashboard.php
+php -l php-app/src/PropertyRepository.php
+```
+
+4. Commit com mensagem descritiva.
+5. Abrir PR no GitHub com resumo da mudanca e riscos.
