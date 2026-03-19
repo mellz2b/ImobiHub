@@ -46,7 +46,7 @@ $properties = $repository->listPublic($filters);
   <header class="topbar">
     <div class="container topbar-inner">
       <div>
-        <h1>ImobiHub PHP</h1>
+        <h1>ImobiHub </h1>
         <p>Catalogo publico de imoveis</p>
       </div>
       <a class="button button-dark" href="/dashboard.php">Abrir dashboard</a>
