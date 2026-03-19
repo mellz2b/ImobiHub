@@ -1,63 +1,40 @@
-# ImobiHub - Gerenciador de Imoveis
+# ImobiHub - PHP
 
-Aplicacao web para imobiliaria com foco no ODS 11 (Cidades e Comunidades Sustentaveis).
+Aplicacao web para imobiliaria com foco no ODS 11 (Cidades e Comunidades Sustentaveis), implementada em PHP + SQLite.
 
 ## Modulos
 
-- Site publico: catalogo de imoveis em `app/page.tsx`
-- Dashboard: painel de gestao em `app/dashboard/page.tsx`
+- Catalogo publico em `php-app/public/index.php`
+- Dashboard de gestao em `php-app/public/dashboard.php`
 
-## Funcionalidades implementadas
+## Funcionalidades
 
-- Adicionar imovel no dashboard
-- Editar preco por anuncio
-- Subir fotos (armazenadas em base64 no navegador)
-- Marcar anuncio como vendido
-- Exibir catalogo publico com filtro para vendidos
+- Cadastro de anuncio com upload de fotos
+- Edicao de anuncio cadastrado
+- Edicao rapida de preco
+- Exclusao de anuncio
+- Alternancia de status vendido/disponivel
+- Filtros no catalogo (tipo, busca, ordenacao e vendidos)
 
 ## Persistencia
 
-Os dados sao persistidos no `localStorage` por meio de `lib/property-store.ts`.
+- Banco SQLite em `php-app/data/imobihub.sqlite`
+- Uploads em `php-app/public/uploads/`
 
-## Executar localmente
-
-```bash
-npm install
-npm run dev
-```
-
-Aplicacao disponivel em `http://localhost:3000`.
-
-## Build de producao
-
-```bash
-npm run build
-npm run start
-```
-
-## Versao PHP (estrutura limpa e organizada)
-
-Tambem foi criada uma versao em PHP em `php-app/`, com:
-
-- Catalogo publico com filtros e busca
-- Dashboard de gestao com cadastro de imovel
-- Edicao de preco por anuncio
-- Upload de fotos para pasta local
-- Alternancia de status vendido/disponivel
-- Persistencia em SQLite
-
-### Estrutura principal
+## Estrutura principal
 
 - `php-app/public/index.php`: catalogo publico
 - `php-app/public/dashboard.php`: painel administrativo
+- `php-app/public/styles.css`: estilos globais
 - `php-app/src/PropertyRepository.php`: regras de acesso a dados
 - `php-app/src/Database.php`: conexao e schema
 - `php-app/src/helpers.php`: funcoes utilitarias
+- `php-app/config/config.php`: configuracoes da aplicacao
 
-### Como executar
+## Executar localmente
 
-1. Instale PHP 8.1+ no sistema.
-2. No terminal, rode:
+1. Instale PHP 8.1+.
+2. Rode no terminal:
 
 ```bash
 cd php-app
@@ -66,5 +43,5 @@ php -S localhost:8000 -t public
 
 3. Acesse:
 
-- `http://localhost:8000/index.php`
+- `http://localhost:8000/`
 - `http://localhost:8000/dashboard.php`

@@ -363,7 +363,7 @@ $ok = request_get_string('ok');
 
               <details>
                 <summary class="button">Editar anuncio</summary>
-                <form method="post" class="form-grid" style="margin-top:12px;">
+                <form method="post" class="form-grid edit-box">
                   <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                   <input type="hidden" name="action" value="edit">
                   <input type="hidden" name="id" value="<?= (int) $item['id'] ?>">
@@ -430,7 +430,7 @@ $ok = request_get_string('ok');
                 <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
                 <input type="hidden" name="action" value="delete">
                 <input type="hidden" name="id" value="<?= (int) $item['id'] ?>">
-                <button class="button" type="submit">Excluir anuncio</button>
+                <button class="button button-danger" type="submit">Excluir anuncio</button>
               </form>
             </div>
 

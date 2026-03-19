@@ -129,6 +129,17 @@ textarea {
   color: #fff;
 }
 
+.button-danger {
+  color: #a02a2a;
+  border-color: #a02a2a;
+}
+
+.button-danger:hover {
+  color: #fff;
+  border-color: #a02a2a;
+  background: #a02a2a;
+}
+
 .result-header {
   display: flex;
   justify-content: space-between;
@@ -311,6 +322,26 @@ textarea {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+details {
+  width: 100%;
+}
+
+details summary {
+  list-style: none;
+}
+
+details summary::-webkit-details-marker {
+  display: none;
+}
+
+.edit-box {
+  margin-top: 12px;
+  border: 1px dashed #bfd0e8;
+  border-radius: 12px;
+  padding: 12px;
+  background: #f9fbff;
 }
 
 .inline-form {
