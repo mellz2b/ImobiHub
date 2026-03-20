@@ -78,6 +78,7 @@ php-app/
 ```bash
 cd php-app
 php -S localhost:8000 -t public
+```
 
 Acesse:
 
@@ -88,44 +89,32 @@ http://localhost:8000/dashboard.php
 ## Arquitetura
 
 O sistema segue uma arquitetura simples com separação de responsabilidades:
-
-Camada de apresentação: public/*.php
-
-Camada de dados: src/PropertyRepository.php
-
-Infraestrutura: src/Database.php
-
-Utilitários: src/helpers.php
+- Camada de apresentação: public/*.php
+- Camada de dados: src/PropertyRepository.php
+- Infraestrutura: src/Database.php
+- Utilitários: src/helpers.php
 
 ## Boas Práticas
 
-Uso de declare(strict_types=1);
-
-Validação de dados de entrada
-
-Uso de PDO com parâmetros (evita SQL Injection)
-
-Escape de saída HTML (proteção contra XSS)
-
-Separação de responsabilidades no código
+- Uso de declare(strict_types=1);
+- Validação de dados de entrada
+- Uso de PDO com parâmetros (evita SQL Injection)
+- Escape de saída HTML (proteção contra XSS)
+- Separação de responsabilidades no código
 
 ## Fluxo de Desenvolvimento
 
-Criar branch de feature
-
-Rodar servidor local
-
-Testar catálogo e dashboard
-
-Validar sintaxe:
+- Criar branch de feature
+- Rodar servidor local
+- Testar catálogo e dashboard
+- Validar sintaxe:
 
 php -l php-app/public/index.php
 php -l php-app/public/dashboard.php
 php -l php-app/src/PropertyRepository.php
 
-Commit com mensagem descritiva
-
-Abrir Pull Request no GitHub
+- Commit com mensagem descritiva
+- Abrir Pull Request no GitHub
 
 ## Equipe
 
