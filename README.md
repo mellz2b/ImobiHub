@@ -29,7 +29,7 @@ ODS 11 - Cidades e Comunidades Sustentáveis
 
 ---
 
-## ⚙️ Funcionalidades
+## Funcionalidades
 - Cadastro de anúncio com upload de fotos  
 - Edição de anúncio cadastrado  
 - Edição rápida de preço  
